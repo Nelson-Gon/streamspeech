@@ -1,4 +1,8 @@
 # Changes to streamspeech
+* Version: 2023.12.08
+- Initial documentation for key functionality 
+- Now using classes #4 #6 
+- Better error handling e.g. in cases where no results are returned or no api key is present.  
 * Version: 2023.12.06
 - Fixed issue with installs not installing dependencies as well
 - Removed files not needed for the app 
