@@ -1,9 +1,18 @@
 import streamlit as st 
 from speechbrain.pretrained import HIFIGAN, Tacotron2 
 import google.generativeai as palm 
+from subprocess import call, Popen, PIPE 
+import signal 
+import subprocess
+from platform import system 
 import os 
 import numpy as np 
 from joblib import Parallel, delayed 
+
+
+def system_tts():
+    use_command = {"darwin": "say", "linux":"espeak"}
+    return use_command[system().lower()]
 
 class StreamSpeech:
     """
@@ -14,7 +23,7 @@ class StreamSpeech:
         """
         Initialize key StreamSpeech models 
         """
-        self.hifi_gan, self.tacotron2 = self.get_model()
+        # self.hifi_gan, self.tacotron2 = self.get_model()
 
     def get_model(self, hifigan_source = "speechbrain/tts-hifigan-ljspeech", 
                 tacotron_source = "speechbrain/tts-hifigan-ljspeech"):
@@ -73,6 +82,11 @@ class StreamSpeech:
         waveforms = self.hifi_gan.decode_batch(output_)
         return waveforms 
     
+
+
+
+
+    
     
     def get_waveform(self,res):
         """Convert text to a mel spectrogram and finally to a waveform 
@@ -106,7 +120,7 @@ class StreamSpeech:
         Returns:
             np.array: Merged array of audio 
         """
-        audios = Parallel(n_jobs = 4, backend="threading")(delayed(self.get_waveform)(x) for x in res if x)
+        audios = Parallel(n_jobs = 4, backend="threading")(delayed(self.system_tts)(x) for x in res if x)
         return self.merge_audio(audios)
     
     
@@ -128,12 +142,21 @@ def main():
     Processor.configure_palm()
     with st.spinner("Processing your input, please wait...."):
         try:
-            audio_res = Processor.process_audio(Processor.prompt_palm(Processor.get_text()).split("\n"))
+            palm_res = Processor.prompt_palm(Processor.get_text())
         except AttributeError:
+            raise 
             st.error("No results generated....please try a different search")
         else:
-            sample_rate = st.slider("Sample Rate", min_value = 16000, max_value = 40000, value = 22050, step = 20)
-            Processor.play_audio(audio_res, sample_rate = sample_rate)
+            # TODO: Restore GAN based TTS 
+            # sample_rate = st.slider("Sample Rate", min_value = 16000, max_value = 40000, value = 22050, step = 20)
+            # Processor.play_audio(audio_res, sample_rate = sample_rate)
+            st.write(palm_res)
+            sys_tts = system_tts()
+            subprocess.Popen([sys_tts, palm_res])
+            if st.button("Stop audio"):
+                os.system(f"pkill {sys_tts}")
+            
+
 
 if __name__=="__main__":
     main()
