@@ -1,6 +1,6 @@
 import streamlit as st 
 from speechbrain.pretrained import HIFIGAN, Tacotron2 
-import google.generativeai as palm 
+import google.generativeai as genai 
 from subprocess import call, Popen, PIPE 
 import signal 
 import subprocess
@@ -23,7 +23,10 @@ class StreamSpeech:
         """
         Initialize key StreamSpeech models 
         """
-        # self.hifi_gan, self.tacotron2 = self.get_model()
+        self.configure_gemini()
+        # TODO: Make these flexible so a user can select any kind of model they want 
+        self.model = genai.GenerativeModel("gemini-pro")
+      
 
     def get_model(self, hifigan_source = "speechbrain/tts-hifigan-ljspeech", 
                 tacotron_source = "speechbrain/tts-hifigan-ljspeech"):
@@ -41,12 +44,13 @@ class StreamSpeech:
         hifi_gan = HIFIGAN.from_hparams(source=self.hifigan_source, savedir="tmpdir_vocoder")
         tacotron2 = Tacotron2.from_hparams(source=self.tacotron_source, savedir="tmpdir_tts")
         return hifi_gan, tacotron2
+
     
-    def configure_palm(self):
+    def configure_gemini(self):
         """Sets the session API key for use with the text generator 
         """
         try:
-            palm.configure(api_key = os.environ["google_key"])
+            genai.configure(api_key = os.environ["google_key"])
         except KeyError:
             st.error("This app requires an API Key named 'google_key' in your environment. Get one at https://developers.generativeai.google/tutorials/setup", icon=":warn:")
         
@@ -56,37 +60,33 @@ class StreamSpeech:
         Returns:
             streamlit.text_area: Streamlit text UI 
         """
-        return st.text_area(label="Type Here", value="Ask me something")
+        return st.text_area(label="Type Here", value="Tell me about yourself in one sentence")
     
-    def prompt_palm(self,user_prompt):
-        """Send user input to the PaLM API 
+    def prompt_gemini(self,user_prompt):
+        """Send user input to the Gemini API 
 
         Args:
-            user_prompt (str): User text e.g. a question to ask PaLM
+            user_prompt (str): User text e.g. a question to ask gemini
 
         Returns:
-            str: PaLM's response 
+            str: Gemini's response 
         """
-        response = palm.generate_text(prompt= user_prompt).result
-        return response
+        response = self.model.generate_content(contents = user_prompt)
+        return response.text
     
-    def text_to_speech(self,palm_response):
+    def text_to_speech(self,gemini_response):
         """Generate audio from text 
         Args:
-            palm_response (str): Results from PaLM prompting 
+            gemini_response (str): Results from gemini prompting 
 
         Returns:
             np.array: A numpy representation of the generated audio 
         """
-        output_, _, _ = self.tacotron2.encode_text(palm_response)
+        output_, _, _ = self.tacotron2.encode_text(gemini_response)
         waveforms = self.hifi_gan.decode_batch(output_)
         return waveforms 
     
 
-
-
-
-    
     
     def get_waveform(self,res):
         """Convert text to a mel spectrogram and finally to a waveform 
@@ -115,7 +115,7 @@ class StreamSpeech:
         """Generate speech for multiple or single prompts 
 
         Args:
-            res (str): Response from PaLM or any form of text 
+            res (str): Response from gemini or any form of text 
 
         Returns:
             np.array: Merged array of audio 
@@ -139,20 +139,20 @@ class StreamSpeech:
 def main():
     Processor = StreamSpeech()
     st.set_page_config(page_title="streamspeech", page_icon=f":brain:")
-    Processor.configure_palm()
     with st.spinner("Processing your input, please wait...."):
         try:
-            palm_res = Processor.prompt_palm(Processor.get_text())
-        except AttributeError:
-            raise 
-            st.error("No results generated....please try a different search")
+            gemini_res = Processor.prompt_gemini(Processor.get_text())
+        except TypeError as err:
+            st.error(err)
+        except AttributeError as err:
+            st.error(err)
         else:
             # TODO: Restore GAN based TTS 
             # sample_rate = st.slider("Sample Rate", min_value = 16000, max_value = 40000, value = 22050, step = 20)
             # Processor.play_audio(audio_res, sample_rate = sample_rate)
-            st.write(palm_res)
+            st.write(gemini_res)
             sys_tts = system_tts()
-            subprocess.Popen([sys_tts, palm_res])
+            subprocess.Popen([sys_tts, gemini_res])
             if st.button("Stop audio"):
                 os.system(f"pkill {sys_tts}")
             
