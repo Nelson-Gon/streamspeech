@@ -77,7 +77,7 @@ The above will open a web browser with the app. NOTE: At the moment, one needs t
 
 Acknowledgements
 
-`streamspeech` is made possible by the [`PaLM` API](https://developers.generativeai.google/), [speechbrain](https://speechbrain.github.io/) by NVIDIA, and [`streamlit`](https://streamlit.io/)
+`streamspeech` is made possible by the [`PaLM` API](https://developers.generativeai.google/), ~~[speechbrain](https://speechbrain.github.io/) by NVIDIA~~, and [`streamlit`](https://streamlit.io/)
 
 
 To report any issues, suggestions or improvement, please do so at [issues](https://github.com/Nelson-Gon/streamspeech/issues). 

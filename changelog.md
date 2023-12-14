@@ -1,5 +1,10 @@
 # Changes to streamspeech
 * Version: 2023.12.08
+- Updated generative-ai version to a higher version 
+- Now using the new Gemini API
+- Initial support for control buttons
+- We now include text which gives a nice and pretty output
+- Temporarily disabled GAN based TTS, instead we now use system TTS functions which means we only support Linux and OSX 
 - Initial documentation for key functionality 
 - Now using classes #4 #6 
 - Better error handling e.g. in cases where no results are returned or no api key is present.  
