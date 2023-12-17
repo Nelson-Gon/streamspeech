@@ -1,5 +1,6 @@
 # Changes to streamspeech
 * Version: 2023.12.08
+- The app now supports image and text input and also allows both types of output. 
 - Updated generative-ai version to a higher version 
 - Now using the new Gemini API
 - Initial support for control buttons
