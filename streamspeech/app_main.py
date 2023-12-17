@@ -8,6 +8,7 @@ from platform import system
 import os 
 import numpy as np 
 from joblib import Parallel, delayed 
+from PIL import Image 
 
 
 def system_tts():
@@ -23,9 +24,14 @@ class StreamSpeech:
         """
         Initialize key StreamSpeech models 
         """
-        self.configure_gemini()
-        # TODO: Make these flexible so a user can select any kind of model they want 
-        self.model = genai.GenerativeModel("gemini-pro")
+        self.configure_gemini()        
+        self.chosen_model = self.choose_model()
+        self.model = genai.GenerativeModel(self.chosen_model)
+    
+    def choose_model(self):
+        model_choice = st.selectbox("Choose a model", ("gemini-pro", "gemini-pro-vision"),
+                                    index = 0)
+        return model_choice
       
 
     def get_model(self, hifigan_source = "speechbrain/tts-hifigan-ljspeech", 
@@ -61,6 +67,10 @@ class StreamSpeech:
             streamlit.text_area: Streamlit text UI 
         """
         return st.text_area(label="Type Here", value="Tell me about yourself in one sentence")
+    
+    def upload_image(self):
+        image_file = st.file_uploader("Choose an image file")
+        return image_file
     
     def prompt_gemini(self,user_prompt):
         """Send user input to the Gemini API 
@@ -137,11 +147,17 @@ class StreamSpeech:
         return st.audio(audio_, **kwargs)
 
 def main():
-    Processor = StreamSpeech()
     st.set_page_config(page_title="streamspeech", page_icon=f":brain:")
+    Processor = StreamSpeech()
     with st.spinner("Processing your input, please wait...."):
         try:
-            gemini_res = Processor.prompt_gemini(Processor.get_text())
+            prompt = Processor.get_text()
+            if "vision" in Processor.chosen_model:
+                image_input = Processor.upload_image()
+                image_file = Image.open(image_input)
+                prompt = [prompt, image_file]
+ 
+            gemini_res = Processor.prompt_gemini(prompt)
         except TypeError as err:
             st.error(err)
         except AttributeError as err:
@@ -150,7 +166,10 @@ def main():
             # TODO: Restore GAN based TTS 
             # sample_rate = st.slider("Sample Rate", min_value = 16000, max_value = 40000, value = 22050, step = 20)
             # Processor.play_audio(audio_res, sample_rate = sample_rate)
-            st.write(gemini_res)
+            col1, col2 = st.columns(2)
+            col1.write(gemini_res)
+            if "vision" in Processor.chosen_model:
+                col2.image(prompt[1])
             sys_tts = system_tts()
             subprocess.Popen([sys_tts, gemini_res])
             if st.button("Stop audio"):
